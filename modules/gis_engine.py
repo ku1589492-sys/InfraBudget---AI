@@ -10,17 +10,41 @@ import plotly.express as px
 import plotly.graph_objects as go
 import pandas as pd
 
-def create_folium_map(df: pd.DataFrame, color_mode: str = "Deficit Risk", center_lat: float = 28.62, center_lon: float = 77.20) -> folium.Map:
+def create_folium_map(
+    df: pd.DataFrame, 
+    color_mode: str = "Deficit Risk", 
+    center_lat: float = 28.62, 
+    center_lon: float = 77.20,
+    map_style: str = "Standard Streets",
+    rainfall_sim_mm: int = 0
+) -> folium.Map:
     """
-    Creates an interactive Folium map with custom styled markers, circular radius proportional to population,
-    and colors mapped to Deficit Risk or K-Means clusters.
+    Creates an interactive Folium map with custom styled markers, satellite/standard tile layers,
+    circular radius proportional to population, Deficit Risk/K-Means colors, and Monsoon Flood alerts.
     """
-    m = folium.Map(
-        location=[center_lat, center_lon],
-        zoom_start=11,
-        tiles="OpenStreetMap",
-        control_scale=True,
-    )
+    # Select Base Tiles
+    if map_style == "ESRI Satellite View":
+        m = folium.Map(
+            location=[center_lat, center_lon],
+            zoom_start=11,
+            tiles="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}",
+            attr="Esri World Imagery",
+            control_scale=True,
+        )
+    elif map_style == "CartoDB Dark Matter":
+        m = folium.Map(
+            location=[center_lat, center_lon],
+            zoom_start=11,
+            tiles="CartoDB dark_matter",
+            control_scale=True,
+        )
+    else:
+        m = folium.Map(
+            location=[center_lat, center_lon],
+            zoom_start=11,
+            tiles="OpenStreetMap",
+            control_scale=True,
+        )
 
     cluster_color_map = {
         0: "#EF4444", # Red
@@ -38,9 +62,24 @@ def create_folium_map(df: pd.DataFrame, color_mode: str = "Deficit Risk", center
 
         village_str = row.get("village_name", row["ward_name"])
 
+        # Monsoon Flood Risk Calculation if simulation active
+        flood_risk_pct = 0.0
+        flood_alert_html = ""
+        if rainfall_sim_mm > 0:
+            flood_risk_pct = min(100.0, float(row.get("drainage_choke_idx", 50)) * (1.0 + rainfall_sim_mm / 120.0) + (100.0 - float(row.get("green_cover_pct", 15))) * 0.15)
+            if flood_risk_pct >= 70.0:
+                flood_alert_html = f"""
+                <div style="background-color: #FEF2F2; border-left: 3px solid #DC2626; padding: 4px 8px; border-radius: 4px; margin-bottom: 6px;">
+                    <span style="font-size: 11px; font-weight: 800; color: #DC2626;">
+                        🚨 MONSOON FLOOD HAZARD: {flood_risk_pct:.1f}% Risk
+                    </span>
+                    <span style="font-size: 10px; color: #991B1B; display: block;">Under {rainfall_sim_mm}mm Downpour: Immediate Sump Pump Deployment Advised</span>
+                </div>
+                """
+
         # HTML popup card
         popup_html = f"""
-        <div style="font-family: 'Plus Jakarta Sans', sans-serif; width: 240px; padding: 4px;">
+        <div style="font-family: 'Plus Jakarta Sans', sans-serif; width: 250px; padding: 4px;">
             <div style="font-weight: 800; font-size: 14px; color: #0F172A; margin-bottom: 2px;">
                 {row['ward_name']}
             </div>
@@ -48,8 +87,9 @@ def create_folium_map(df: pd.DataFrame, color_mode: str = "Deficit Risk", center
                 🏡 Locality / Village: <span style="color: #2563EB;">{village_str}</span>
             </div>
             <div style="font-size: 11px; color: #64748B; margin-bottom: 8px;">
-                {row['zone']} Zone | {row['ward_type']}
+                {row['zone']} Zone | {row['ward_type']} | Pop: {row['population']:,}
             </div>
+            {flood_alert_html}
             <div style="background-color: {color}20; border-left: 3px solid {color}; padding: 4px 8px; border-radius: 4px; margin-bottom: 8px;">
                 <span style="font-size: 12px; font-weight: 700; color: {color};">
                     Deficit Score: {row['deficit_score']} / 100
@@ -58,7 +98,7 @@ def create_folium_map(df: pd.DataFrame, color_mode: str = "Deficit Risk", center
             </div>
             <div style="font-size: 11px; line-height: 1.5; color: #334155;">
                 • <b>Road Age:</b> {row['avg_road_age_years']} yrs ({row['unresolved_potholes']} potholes)<br/>
-                • <b>Water Deficit:</b> {row['water_deficit_pct']}%<br/>
+                • <b>Water Deficit:</b> {row['water_deficit_pct']}% | Drain Choke: {row['drainage_choke_idx']}/100<br/>
                 • <b>Complaints:</b> {row['citizen_complaints_30d']} logged (30d)<br/>
                 • <b>Green Cover:</b> {row['green_cover_pct']}% | UHI: +{row['urban_heat_island_idx']}°C<br/>
                 • <b>Cluster:</b> {row['cluster_label'].split(' - ')[0]}
@@ -67,27 +107,32 @@ def create_folium_map(df: pd.DataFrame, color_mode: str = "Deficit Risk", center
         """
 
         # Outer pulse circle
+        pulse_color = "#0284C7" if (rainfall_sim_mm > 0 and flood_risk_pct >= 70.0) else color
         folium.Circle(
             location=[row["lat"], row["lon"]],
-            radius=900,
-            color=color,
-            weight=1.5,
+            radius=1100 if (rainfall_sim_mm > 0 and flood_risk_pct >= 70.0) else 900,
+            color=pulse_color,
+            weight=2 if (rainfall_sim_mm > 0 and flood_risk_pct >= 70.0) else 1.5,
             fill=True,
-            fill_color=color,
-            fill_opacity=0.15,
+            fill_color=pulse_color,
+            fill_opacity=0.35 if (rainfall_sim_mm > 0 and flood_risk_pct >= 70.0) else 0.15,
         ).add_to(m)
 
         # Inner pinpoint marker with clear village name tooltip
+        tooltip_txt = f"📍 {row['ward_name']} ({village_str}) — Deficit: {row['deficit_score']}/100 ({row['risk_category']})"
+        if rainfall_sim_mm > 0 and flood_risk_pct >= 70.0:
+            tooltip_txt = f"🌊 FLOOD RISK: {flood_risk_pct:.0f}% | {row['ward_name']} ({village_str})"
+
         folium.CircleMarker(
             location=[row["lat"], row["lon"]],
-            radius=8,
+            radius=9,
             color="#FFFFFF",
             weight=2,
             fill=True,
             fill_color=color,
             fill_opacity=0.95,
-            tooltip=f"📍 {row['ward_name']} ({village_str}) — Deficit: {row['deficit_score']}/100 ({row['risk_category']})",
-            popup=folium.Popup(popup_html, max_width=280)
+            tooltip=tooltip_txt,
+            popup=folium.Popup(popup_html, max_width=290)
         ).add_to(m)
 
     return m

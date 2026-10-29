@@ -132,3 +132,49 @@ def get_smart_contract_phases(ward_name: str) -> list:
             "color": "#64748B"
         }
     ]
+
+
+def verify_ledger_integrity(blocks: list) -> dict:
+    """
+    Cryptographically verifies the blockchain ledger.
+    Checks that every block's stored hash matches recalculation,
+    and that previous_hash matches the predecessor block's hash.
+    """
+    total = len(blocks)
+    results = []
+    is_valid = True
+    corrupt_idx = None
+
+    for i in range(total):
+        b = blocks[i]
+        expected_hash = b.compute_hash()
+        hash_valid = (b.hash == expected_hash)
+        chain_valid = True
+
+        if i > 0:
+            chain_valid = (b.prev_hash == blocks[i - 1].hash)
+
+        if not (hash_valid and chain_valid):
+            is_valid = False
+            if corrupt_idx is None:
+                corrupt_idx = i
+
+        results.append({
+            "index": b.index,
+            "ward_name": b.ward_name,
+            "project_name": b.project_name,
+            "amount_lakhs": b.amount_lakhs,
+            "hash": b.hash,
+            "prev_hash": b.prev_hash,
+            "hash_valid": hash_valid,
+            "chain_valid": chain_valid,
+            "status": "VALID" if (hash_valid and chain_valid) else "COMPROMISED"
+        })
+
+    return {
+        "is_valid": is_valid,
+        "total_blocks": total,
+        "corrupt_index": corrupt_idx,
+        "block_results": results
+    }
+

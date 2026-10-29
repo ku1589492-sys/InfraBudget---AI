@@ -14,11 +14,13 @@ def run_pulp_budget_optimization(
     total_budget_lakhs: float,
     sector_weights: dict,
     min_ward_budget: float = 40.0,
-    max_ward_budget: float = 450.0
+    max_ward_budget: float = 450.0,
+    rainfall_sim_mm: int = 0
 ) -> dict:
     """
     Executes a PuLP Linear Programming optimization.
     Returns the optimal allocations per ward, sectoral splits, deficit improvement, and solver telemetry.
+    Supports Monsoon Climate Stress Resilience when rainfall_sim_mm > 0.
     """
     start_time = time.time()
     
@@ -29,10 +31,9 @@ def run_pulp_budget_optimization(
     current_budget_map = dict(zip(ward_ids, df["current_budget_lakhs"]))
 
     # Normalize sector priority multiplier
-    # e.g., if Roads has high priority, wards with higher road age get extra boost
     sector_multiplier = sum(sector_weights.values()) / max(1e-5, len(sector_weights))
 
-    # Weight per ward based on deficit and population needs
+    # Weight per ward based on deficit, population, and climate stress
     ward_weight_map = {}
     for wid in ward_ids:
         row = df[df["ward_id"] == wid].iloc[0]
@@ -42,7 +43,11 @@ def run_pulp_budget_optimization(
         sanitation_priority = (row["citizen_complaints_30d"] / 200.0) * sector_weights.get("Sanitation & Waste", 1.0)
         green_priority = ((45 - row["green_cover_pct"]) / 35.0) * sector_weights.get("Greenery & Lighting", 1.0)
         
-        sector_impact = road_priority + water_priority + sanitation_priority + green_priority
+        # Monsoon Resilience Factor
+        drainage_choke = float(row.get("drainage_choke_idx", 50))
+        monsoon_boost = (drainage_choke / 40.0) * (rainfall_sim_mm / 80.0) if rainfall_sim_mm > 0 else 0.0
+
+        sector_impact = road_priority + water_priority + sanitation_priority + green_priority + monsoon_boost
         priority_coeff = (row["deficit_score"] / 50.0) * (row["population"] / 100000.0) * (1.0 + sector_impact * 0.25)
         ward_weight_map[wid] = max(0.5, priority_coeff)
 

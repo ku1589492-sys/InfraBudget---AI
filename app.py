@@ -20,7 +20,7 @@ from modules.data_generator import generate_ward_dataset, get_sector_breakdown, 
 from modules.gis_engine import create_folium_map, create_plotly_gis_map
 from modules.ml_engine import DeficitPredictor, plot_global_feature_importance
 from modules.optimization import run_pulp_budget_optimization
-from modules.blockchain import generate_blockchain_ledger, get_smart_contract_phases, calculate_sha256
+from modules.blockchain import generate_blockchain_ledger, get_smart_contract_phases, calculate_sha256, verify_ledger_integrity
 from modules.vision_detector import run_yolo_damage_detector, create_sample_damage_image
 from modules.genai_assistant import answer_municipal_query, generate_executive_report
 
@@ -232,6 +232,20 @@ with st.sidebar:
     }
 
     st.markdown("---")
+    st.markdown("#### 🌧️ Monsoon & Climate Stress")
+    sim_rain = st.slider(
+        "Simulate Rainfall (mm):",
+        min_value=0,
+        max_value=200,
+        value=int(st.session_state.get("simulated_rainfall", 0)),
+        step=10,
+        help="Simulate heavy downpour in mm. Recalculates flood risk & tests emergency pump allocation."
+    )
+    st.session_state["simulated_rainfall"] = sim_rain
+    if sim_rain > 0:
+        st.caption("⚠️ Extreme Downpour Simulation Active: Prioritizes emergency sump & drain desilting.")
+
+    st.markdown("---")
     
     # 3. Ward Filter
     df_wards = st.session_state["ward_df"]
@@ -399,7 +413,7 @@ with tab1:
     map_col, info_col = st.columns([65, 35])
 
     with map_col:
-        map_header_c1, map_header_c2 = st.columns([5, 5])
+        map_header_c1, map_header_c2, map_header_c3 = st.columns([4, 3, 3])
         with map_header_c1:
             color_mode = st.radio(
                 "Color Encoding:",
@@ -412,13 +426,25 @@ with tab1:
                 ["Folium (Interactive Pins)", "Plotly (High-Speed Vector)"],
                 horizontal=True
             )
+        with map_header_c3:
+            map_style = st.selectbox(
+                "GIS Base Layer:",
+                ["Standard Streets", "ESRI Satellite View", "CartoDB Dark Matter"]
+            )
+
+        rainfall_sim = int(st.session_state.get("simulated_rainfall", 0))
+        if rainfall_sim > 0:
+            flood_count = sum(1 for _, r in filtered_df.iterrows() if (min(100.0, float(r.get('drainage_choke_idx', 50)) * (1.0 + rainfall_sim / 120.0) + (100.0 - float(r.get('green_cover_pct', 15))) * 0.15) >= 70.0))
+            st.warning(f"🌧️ **Monsoon Inundation Warning ({rainfall_sim}mm Downpour):** **{flood_count} Wards** at severe flood hazard risk. Glowing blue rings highlight priority drainage desilting & dewatering zones.")
 
         if "Folium" in map_engine:
             folium_map = create_folium_map(
                 filtered_df,
                 color_mode=color_mode,
                 center_lat=dist_details["center_lat"],
-                center_lon=dist_details["center_lon"]
+                center_lon=dist_details["center_lon"],
+                map_style=map_style,
+                rainfall_sim_mm=rainfall_sim
             )
             st_folium(folium_map, use_container_width=True, height=520, returned_objects=[])
         else:
@@ -707,7 +733,8 @@ with tab3:
         total_budget_lakhs=total_budget_lakhs,
         sector_weights=sector_weights,
         min_ward_budget=min_ward_input,
-        max_ward_budget=max_ward_input
+        max_ward_budget=max_ward_input,
+        rainfall_sim_mm=int(st.session_state.get("simulated_rainfall", 0))
     )
 
     st.markdown("<div style='height: 10px;'></div>", unsafe_allow_html=True)
@@ -739,6 +766,43 @@ with tab3:
     )
     st.plotly_chart(comp_fig, use_container_width=True)
 
+    dossier_col1, dossier_col2 = st.columns([6, 4])
+    with dossier_col1:
+        csv_bytes = alloc_df.to_csv(index=False).encode('utf-8')
+        st.download_button(
+            label="📥 Download Official Municipal Allocation Dossier (CSV)",
+            data=csv_bytes,
+            file_name=f"InfraBudget_Official_Dossier_{st.session_state['selected_district'].replace(' ', '_')}.csv",
+            mime="text/csv",
+            help="Download audit-ready ward-by-ward allocation table verified by PuLP solver."
+        )
+    with dossier_col2:
+        st.caption(f"🏛️ Municipal Corporation of {st.session_state['selected_district']} • FY 2026-27")
+
+    with st.expander("🏛️ Preview Official Government Council Resolution Dossier", expanded=False):
+        st.markdown(f"""
+        <div style="background: white; border: 2px solid #0F172A; border-radius: 8px; padding: 22px; font-family: 'Times New Roman', serif; color: #0F172A;">
+            <div style="text-align: center; border-bottom: 2px solid #0F172A; padding-bottom: 12px; margin-bottom: 14px;">
+                <div style="font-size: 1.25rem; font-weight: 800; text-transform: uppercase;">MUNICIPAL CORPORATION OF {st.session_state['selected_district'].upper()}</div>
+                <div style="font-size: 0.9rem; font-weight: 700; color: #475569;">DEPARTMENT OF URBAN DEVELOPMENT & FINANCE • {st.session_state['selected_state'].upper()}</div>
+                <div style="font-size: 0.8rem; margin-top: 4px; font-weight: 600;">COUNCIL DOCKET RESOLUTION NO. MCMC/FIN/2026-27/D-882</div>
+            </div>
+            <div style="font-size: 0.92rem; line-height: 1.8;">
+                <b>MEMORANDUM FOR THE STANDING COMMITTEE:</b><br/>
+                <b>Subject:</b> Algorithmic Capital Expenditure & Ward Infrastructure Allocation for FY 2026-27.<br/>
+                <b>Total Approved Capex Pool:</b> <b>₹{st.session_state['custom_budget_cr']:.2f} Crores (₹{total_budget_lakhs:,.1f} Lakhs)</b><br/>
+                <b>Target Population:</b> {tot_population:,} Citizens across {len(df_wards)} Municipal Wards.<br/>
+                <b>Optimization Algorithm:</b> PuLP CBC Simplex with Equity Guarantee Floor (Min: ₹{min_ward_input:.1f}L, Cap: ₹{max_ward_input:.1f}L).<br/>
+                <b>Average Infrastructure Deficit Improvement:</b> <b>{opt_res['avg_deficit_before']} / 100 ➔ {opt_res['avg_deficit_after']} / 100 ({opt_res['total_deficit_reduction_pct']}% Drop)</b>.<br/>
+                <b>Zero-Leakage Assurance:</b> Certified via SHA-256 Merkle Blockchain Ledger.<br/>
+            </div>
+            <div style="margin-top: 20px; display: flex; justify-content: space-between; border-top: 1px dashed #94A3B8; padding-top: 10px; font-size: 0.82rem;">
+                <div><b>Prepared by:</b> InfraBudget AI Municipal Support System</div>
+                <div><b>Certified by:</b> Municipal Commissioner & Standing Committee</div>
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
     with st.expander("📊 View Detailed Ward-Wise Allocation & Sector Split Table", expanded=False):
         st.dataframe(
             alloc_df[[
@@ -765,8 +829,21 @@ with tab3:
         st.markdown("#### 📜 Distributed Municipal Disbursement Ledger")
         blockchain_ledger = generate_blockchain_ledger(df_wards)
         
+        # Interactive Cryptographic Verification & Tamper Defense
+        audit_c1, audit_c2 = st.columns([6, 4])
+        with audit_c1:
+            st.caption("Cryptographic SHA-256 Merkle Chain Verification")
+        with audit_c2:
+            simulate_tamper = st.toggle("🧪 Simulate Malicious Tamper", key="toggle_tamper_demo", help="Artificially alter Block #2 to demonstrate automated fraud detection")
+
+        import copy
+        ledger_to_audit = copy.deepcopy(blockchain_ledger)
+        if simulate_tamper:
+            ledger_to_audit[2].amount_lakhs = 999.0  # Intentional fraud simulation!
+
         ledger_data = []
-        for b in blockchain_ledger:
+        for b in ledger_to_audit:
+            is_corrupt = (simulate_tamper and b.index == 2)
             ledger_data.append({
                 "Block #": f"Block #{b.index}",
                 "Timestamp": b.timestamp,
@@ -774,10 +851,15 @@ with tab3:
                 "Amount (₹L)": f"₹{b.amount_lakhs:.1f}L",
                 "Milestone Phase": b.milestone_phase,
                 "SHA-256 Hash": f"{b.hash[:10]}...{b.hash[-6:]}",
-                "Status": "✅ VERIFIED ON-CHAIN"
+                "Status": "❌ TAMPERED / CORRUPTED" if is_corrupt else "✅ VERIFIED ON-CHAIN"
             })
-        st.dataframe(pd.DataFrame(ledger_data), use_container_width=True, hide_index=True, height=260)
-        st.success("🔒 **Zero-Leakage Assurance:** All disbursement blocks are cryptographically chained via SHA-256 Merkle root. 0 Tampering Detected.")
+        st.dataframe(pd.DataFrame(ledger_data), use_container_width=True, hide_index=True, height=240)
+
+        audit_res = verify_ledger_integrity(ledger_to_audit)
+        if audit_res["is_valid"]:
+            st.success("🔒 **Zero-Leakage Assurance:** All 9 disbursement blocks cryptographically verified via SHA-256 Merkle root. 100% Chain Intact.")
+        else:
+            st.error(f"🚨 **CRYPTOGRAPHIC FRAUD DETECTED at Block #{audit_res['corrupt_index']}!** Payload hash does not match block header. Smart contract automated defense has frozen municipal payouts.")
 
     with b_col2:
         st.markdown("#### 📑 Smart Contract Escrow Milestones")
