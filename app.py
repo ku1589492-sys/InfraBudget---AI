@@ -1051,7 +1051,7 @@ with tab5:
                 with st.chat_message("user", avatar="👤"):
                     st.markdown(f"**{msg['content']}**")
             else:
-                with st.chat_message("assistant", avatar="✦"):
+                with st.chat_message("assistant", avatar="✨"):
                     st.markdown(msg["content"])
                     if msg.get("audio_bytes"):
                         st.caption("🔊 Audio Briefing (आवाज़ में सुनें):")
