@@ -793,7 +793,7 @@ with tab3:
                 <b>Total Approved Capex Pool:</b> <b>₹{st.session_state['custom_budget_cr']:.2f} Crores (₹{total_budget_lakhs:,.1f} Lakhs)</b><br/>
                 <b>Target Population:</b> {tot_population:,} Citizens across {len(df_wards)} Municipal Wards.<br/>
                 <b>Optimization Algorithm:</b> PuLP CBC Simplex with Equity Guarantee Floor (Min: ₹{min_ward_input:.1f}L, Cap: ₹{max_ward_input:.1f}L).<br/>
-                <b>Average Infrastructure Deficit Improvement:</b> <b>{opt_res['avg_deficit_before']} / 100 ➔ {opt_res['avg_deficit_after']} / 100 ({opt_res['total_deficit_reduction_pct']}% Drop)</b>.<br/>
+                <b>Average Infrastructure Deficit Improvement:</b> <b>{opt_res.get('avg_deficit_before', opt_res.get('initial_city_avg_deficit', 0.0))} / 100 ➔ {opt_res.get('avg_deficit_after', opt_res.get('projected_city_avg_deficit', 0.0))} / 100 ({opt_res.get('total_deficit_reduction_pct', opt_res.get('city_improvement_pct', 0.0))}% Drop)</b>.<br/>
                 <b>Zero-Leakage Assurance:</b> Certified via SHA-256 Merkle Blockchain Ledger.<br/>
             </div>
             <div style="margin-top: 20px; display: flex; justify-content: space-between; border-top: 1px dashed #94A3B8; padding-top: 10px; font-size: 0.82rem;">

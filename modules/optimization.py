@@ -128,6 +128,7 @@ def run_pulp_budget_optimization(
 
     return {
         "status": solver_status_str,
+        "solver_status": solver_status_str,
         "solve_duration_ms": solve_duration_ms,
         "total_budget_lakhs": total_budget_lakhs,
         "total_allocated_lakhs": round(total_allocated, 2),
@@ -135,5 +136,8 @@ def run_pulp_budget_optimization(
         "initial_city_avg_deficit": initial_city_avg_deficit,
         "projected_city_avg_deficit": projected_city_avg_deficit,
         "city_improvement_pct": city_improvement_pct,
+        "avg_deficit_before": initial_city_avg_deficit,
+        "avg_deficit_after": projected_city_avg_deficit,
+        "total_deficit_reduction_pct": city_improvement_pct,
         "allocations_df": alloc_df
     }
