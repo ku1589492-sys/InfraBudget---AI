@@ -314,3 +314,25 @@ def generate_executive_report(df: pd.DataFrame, city_name: str = "Delhi (MCD)") 
     ])
 
     return "\n".join(lines)
+
+
+def generate_speech_audio(text: str, lang: str = "Hindi") -> bytes:
+    """
+    Synthesizes natural MP3 speech audio from text using gTTS.
+    Falls back gracefully if network is unavailable.
+    """
+    try:
+        from gtts import gTTS
+        import io
+        clean_text = text.replace("#", "").replace("*", "").replace("•", "").replace("`", "").strip()
+        if len(clean_text) > 350:
+            clean_text = clean_text[:350] + "..."
+        tts_lang = "hi" if lang in ["Hindi", "Hinglish", "hi"] else "en"
+        tts = gTTS(text=clean_text, lang=tts_lang, slow=False)
+        fp = io.BytesIO()
+        tts.write_to_fp(fp)
+        fp.seek(0)
+        return fp.read()
+    except Exception:
+        return None
+
