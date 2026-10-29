@@ -305,7 +305,7 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
     "📊 2. Infrastructure Deficit Analytics",
     "💰 3. Budget Optimizer & Blockchain Ledger",
     "📱 4. Citizen Crowdsourcing & YOLO Vision",
-    "🤖 5. Municipal GenAI Copilot"
+    "✨ 5. AI Copilot (Chat & Voice)"
 ])
 
 
@@ -980,194 +980,151 @@ with tab4:
 
 
 # ==========================================
-# TAB 5: MUNICIPAL GENAI COPILOT & VOICE ASSISTANT
+# TAB 5: MUNICIPAL GENAI COPILOT (Clean Gemini / ChatGPT Style)
 # ==========================================
 with tab5:
-    st.markdown(f"""
-    <div style="background: linear-gradient(135deg, #0F172A 0%, #1E293B 100%); border-radius: 14px; padding: 1.25rem 1.5rem; color: white; margin-bottom: 1.2rem; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 4px 15px rgba(15,23,42,0.12);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <div>
-                <div style="font-size: 1.35rem; font-weight: 800; display: flex; align-items: center; gap: 8px;">
-                    🎙️ Municipal AI Voice Decision Copilot
-                    <span style="background: #2563EB; font-size: 0.72rem; padding: 3px 8px; border-radius: 9999px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em;">Live 24/7</span>
-                </div>
-                <div style="font-size: 0.83rem; color: #94A3B8; margin-top: 3px;">
-                    Conversational municipal decision support • Ask doubts by <b>Speaking into your Mic</b> or <b>Typing</b> in Hindi (हिंदी), English, or Hinglish
-                </div>
+    has_chat = bool(st.session_state.get("chat_history"))
+
+    # 1. Active Chat Top Bar (Clean, shown only when conversation is active)
+    if has_chat:
+        col_hdr_left, col_hdr_right = st.columns([8, 2])
+        with col_hdr_left:
+            st.markdown(f"""
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+                <span style="font-size: 1.15rem; font-weight: 800; color: #0F172A;">✦ InfraBudget Copilot</span>
+                <span style="font-size: 0.76rem; background: #EEF2F6; color: #475569; padding: 2px 10px; border-radius: 9999px; font-weight: 600;">{st.session_state['selected_district']}</span>
             </div>
-            <div style="background: rgba(255,255,255,0.08); padding: 6px 12px; border-radius: 8px; font-size: 0.8rem; color: #E2E8F0; border: 1px solid rgba(255,255,255,0.1);">
-                🏛️ <b>Active Jurisdiction:</b> {dist_details['full_name']}
-            </div>
+            """, unsafe_allow_html=True)
+        with col_hdr_right:
+            if st.button("➕ New Chat", key="btn_reset_chat", use_container_width=True, help="Clear conversation and start fresh"):
+                st.session_state["chat_history"] = []
+                st.rerun()
+
+    # 2. If Chat is empty -> Centered, Distraction-Free Gemini Landing View
+    if not has_chat:
+        st.markdown(f"""
+        <div style="text-align: center; padding: 2.2rem 1rem 1.4rem 1rem; max-width: 640px; margin: 0 auto;">
+            <div class="gemini-sparkle-icon">✦</div>
+            <h2 style="font-size: 1.7rem; font-weight: 800; color: #0F172A; margin: 0 0 6px 0; letter-spacing: -0.02em;">
+                How can I help with {st.session_state['selected_district']}?
+            </h2>
+            <p style="font-size: 0.95rem; color: #64748B; margin: 0 auto; line-height: 1.5;">
+                Ask any question about ward deficits, broken roads, water shortages, or budget allocation in <b>Hindi (हिंदी), English, or Hinglish</b>.
+            </p>
         </div>
+        """, unsafe_allow_html=True)
+
+        # 4 Gemini-Style Clickable Suggestion Cards
+        sc1, sc2 = st.columns(2)
+        with sc1:
+            st.markdown('<div class="copilot-prompt-card">', unsafe_allow_html=True)
+            if st.button("💡 Explain this project in simple words\n(प्रोजेक्ट आसान भाषा में समझें)", key="sc_explain", use_container_width=True):
+                st.session_state["pending_prompt"] = "Explain the whole InfraBudget AI project in simple words and how it works"
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            st.markdown('<div class="copilot-prompt-card">', unsafe_allow_html=True)
+            if st.button("🚨 Which wards have the most critical deficit?\n(सबसे ज्यादा समस्या वाले वार्ड)", key="sc_crit", use_container_width=True):
+                st.session_state["pending_prompt"] = f"Which wards have the most critical deficit in {st.session_state['selected_district']}?"
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        with sc2:
+            st.markdown('<div class="copilot-prompt-card">', unsafe_allow_html=True)
+            if st.button("💧 Water shortage & drainage choke crisis\n(पानी और नाले की समस्या कहाँ है?)", key="sc_water", use_container_width=True):
+                st.session_state["pending_prompt"] = f"Paani aur drainage choke ki sabse badi samasya kis ward mein hai?"
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            st.markdown('<div class="copilot-prompt-card">', unsafe_allow_html=True)
+            if st.button("⚖️ How does PuLP AI allocate the budget fairly?\n(बजट का गणितीय बंटवारा कैसे हुआ?)", key="sc_pulp", use_container_width=True):
+                st.session_state["pending_prompt"] = "How does PuLP linear programming allocate the municipal budget?"
+                st.rerun()
+            st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown("<div style='height: 14px;'></div>", unsafe_allow_html=True)
+
+    else:
+        # 3. Conversation Flow (ChatGPT / Gemini style)
+        for msg in st.session_state["chat_history"]:
+            if msg["role"] == "user":
+                with st.chat_message("user", avatar="👤"):
+                    st.markdown(f"**{msg['content']}**")
+            else:
+                with st.chat_message("assistant", avatar="✦"):
+                    st.markdown(msg["content"])
+                    if msg.get("audio_bytes"):
+                        st.caption("🔊 Audio Briefing (आवाज़ में सुनें):")
+                        st.audio(msg["audio_bytes"], format="audio/mp3")
+
+    # 4. Clean Voice Microphone Button (Direct Web Speech Recognition)
+    st.components.v1.html("""
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; display: flex; align-items: center; justify-content: center; gap: 8px; margin: 4px 0 2px 0;">
+        <button id="micBtn" onclick="toggleSpeech()" style="background: #2563EB; color: white; border: none; border-radius: 9999px; padding: 7px 16px; font-size: 13px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 8px; box-shadow: 0 2px 8px rgba(37,99,235,0.25); transition: all 0.2s ease;">
+            <span id="micIcon" style="font-size: 15px;">🎙️</span> <span id="micText">Tap to Speak (बोलकर पूछें)</span>
+        </button>
     </div>
-    """, unsafe_allow_html=True)
-
-    # 1. SMART DOUBT RESOLVER CHIPS (Quick Common Questions)
-    st.markdown("#### 💡 Quick Doubt Resolver (तुरंत सवाल पूछें - 1-Click Answers)")
-    st.caption("Click any doubt below to get an instant factual answer with voice briefing:")
-    
-    dq_col1, dq_col2, dq_col3 = st.columns(3)
-    with dq_col1:
-        if st.button("📢 प्रोजेक्ट आसान भाषा में समझें\n*(Explain Project Plainly)*", key="dq_explain", use_container_width=True):
-            st.session_state["pending_prompt"] = "Explain the whole InfraBudget AI project in simple words and how it works"
-        if st.button("⚖️ बजट का गणितीय बंटवारा कैसे होता है?\n*(How PuLP AI Optimizes Budget)*", key="dq_pulp", use_container_width=True):
-            st.session_state["pending_prompt"] = "PuLP mathematical optimization budget ka batwara kaise karta hai samjhao"
-
-    with dq_col2:
-        if st.button("🚨 सबसे खराब हालत किस वार्ड की है?\n*(Critical Deficit Wards)*", key="dq_crit", use_container_width=True):
-            st.session_state["pending_prompt"] = f"Sabse zyada kharab sthiti kis ward ki hai {st.session_state['selected_district']} mein?"
-        if st.button("⛓️ भ्रष्टाचार और लीकेज कैसे रुकती है?\n*(Blockchain Smart Contracts)*", key="dq_bc", use_container_width=True):
-            st.session_state["pending_prompt"] = "Blockchain smart contracts aur escrow se fund leakage kaise rukti hai?"
-
-    with dq_col3:
-        if st.button("💧 पानी व नाले का सबसे बड़ा संकट कहाँ है?\n*(Water & Drainage Choke)*", key="dq_water", use_container_width=True):
-            st.session_state["pending_prompt"] = f"Paani aur drainage choke ki sabse badi samasya kis ward mein hai?"
-        if st.button("🌧️ मानसून में जल-भराव रोकने की योजना?\n*(Monsoon Flood Prevention)*", key="dq_flood", use_container_width=True):
-            st.session_state["pending_prompt"] = "Monsoon heavy rainfall mein jal bharaav rokne ke liye AI kya plan banata hai?"
-
-    # 2. MICROPHONE VOICE INPUT COMPONENT (Web Speech Recognition)
-    st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
-    with st.container(border=True):
-        st.components.v1.html(f"""
-        <div style="font-family: 'Plus Jakarta Sans', sans-serif;">
-            <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
-                <div style="display: flex; align-items: center; gap: 12px;">
-                    <button id="micBtn" onclick="toggleSpeech()" style="background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); color: white; border: none; border-radius: 50%; width: 48px; height: 48px; font-size: 22px; cursor: pointer; display: flex; align-items: center; justify-content: center; box-shadow: 0 4px 14px rgba(220,38,38,0.35); transition: transform 0.2s;" title="Click to speak">
-                        🎙️
-                    </button>
-                    <div>
-                        <div id="micStatus" style="font-weight: 800; font-size: 14px; color: #0F172A;">
-                            🎤 बोलकर सवाल पूछें (Tap Mic to Speak)
-                        </div>
-                        <div style="font-size: 11.5px; color: #64748B;">
-                            Direct Voice Recognition in Hindi (हिंदी) & English • Mic button dabakar apna sawal bolein
-                        </div>
-                    </div>
-                </div>
-                <div id="copyAction" style="display: none;">
-                    <button onclick="navigator.clipboard.writeText(document.getElementById('transText').innerText); alert('Copied to clipboard! Ab niche chat input mein paste karke Send karein.');" style="background: #2563EB; color: white; border: none; border-radius: 6px; padding: 6px 12px; font-size: 12px; font-weight: 700; cursor: pointer;">
-                        📋 Copy Spoken Query
-                    </button>
-                </div>
-            </div>
-            <div id="transcriptBox" style="display: none; margin-top: 10px; background: #F8FAFC; border: 1.5px solid #3B82F6; border-radius: 8px; padding: 10px 14px; font-size: 13.5px; color: #1E293B;">
-                <div style="font-size: 11px; font-weight: 700; color: #2563EB; margin-bottom: 2px;">🎙️ AAPNE BOLA (VOICE RECOGNIZED):</div>
-                <div id="transText" style="font-weight: 700; color: #0F172A;"></div>
-                <div style="font-size: 11px; color: #15803D; margin-top: 4px;">✓ Niche input box mein paste karein ya Send dabayein!</div>
-            </div>
-        </div>
-
-        <script>
-        var recognition = null;
-        var isRecording = false;
-
-        if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {{
-            var SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            recognition = new SpeechRecognition();
-            recognition.continuous = false;
-            recognition.interimResults = false;
-            recognition.lang = 'hi-IN'; // Supports Hindi & Indian English
-
-            recognition.onstart = function() {{
-                isRecording = true;
-                document.getElementById('micBtn').style.transform = 'scale(1.15)';
-                document.getElementById('micBtn').style.boxShadow = '0 0 0 10px rgba(220,38,38,0.25)';
-                document.getElementById('micStatus').innerHTML = '<span style=\"color: #DC2626;\">🔴 Sun Raha Hoon (Listening)... Boliyen!</span>';
-                document.getElementById('transcriptBox').style.display = 'block';
-                document.getElementById('transText').innerText = 'Sun raha hoon...';
-            }};
-
-            recognition.onresult = function(event) {{
-                var spoken = event.results[0][0].transcript;
-                document.getElementById('transText').innerText = spoken;
-                document.getElementById('copyAction').style.display = 'block';
-                navigator.clipboard.writeText(spoken);
-            }};
-
-            recognition.onerror = function(event) {{
-                document.getElementById('micStatus').innerText = 'Mic error: ' + event.error;
-            }};
-
-            recognition.onend = function() {{
-                isRecording = false;
-                document.getElementById('micBtn').style.transform = 'scale(1)';
-                document.getElementById('micBtn').style.boxShadow = '0 4px 14px rgba(220,38,38,0.35)';
-                document.getElementById('micStatus').innerText = '✅ Suna gaya! Text copy ho chuka hai.';
-            }};
-        }}
-
-        function toggleSpeech() {{
-            if (!recognition) {{
-                alert('Browser does not support Speech Recognition. Please use Google Chrome or Microsoft Edge.');
-                return;
-            }}
-            if (isRecording) {{
-                recognition.stop();
-            }} else {{
-                recognition.start();
-            }}
-        }}
-        </script>
-        """, height=120)
-
-    # 3. CONVERSATION THREAD (Native Streamlit chat_message)
-    st.markdown("---")
-    chat_header_c1, chat_header_c2 = st.columns([7, 3])
-    with chat_header_c1:
-        st.markdown("#### 💬 Conversation History")
-    with chat_header_c2:
-        if st.button("🔄 Reset Conversation", key="btn_reset_chat", use_container_width=True):
-            st.session_state["chat_history"] = [
-                {
-                    "role": "assistant",
-                    "content": f"Namaste Commissioner. I am **InfraBudget AI**, your municipal decision copilot for **{st.session_state['selected_district']}**. How can I assist you with ward infrastructure deficits or budget optimization today?",
-                    "speech": f"Namaste Commissioner. I am InfraBudget AI for {st.session_state['selected_district']}."
+    <script>
+    var recognition = null;
+    var isRec = false;
+    if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+        var SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+        recognition = new SR();
+        recognition.lang = 'hi-IN';
+        recognition.continuous = false;
+        recognition.onstart = function() {
+            isRec = true;
+            document.getElementById('micBtn').style.background = '#DC2626';
+            document.getElementById('micIcon').innerText = '🔴';
+            document.getElementById('micText').innerText = 'Listening... बोलिए!';
+        };
+        recognition.onresult = function(e) {
+            var spoken = e.results[0][0].transcript;
+            document.getElementById('micIcon').innerText = '✅';
+            document.getElementById('micText').innerText = 'Sending: "' + spoken.substring(0, 22) + '..."';
+            try {
+                var ta = window.parent.document.querySelector('textarea[data-testid="stChatInputTextArea"]');
+                if (ta) {
+                    var nativeSetter = Object.getOwnPropertyDescriptor(window.parent.HTMLTextAreaElement.prototype, "value").set;
+                    nativeSetter.call(ta, spoken);
+                    ta.dispatchEvent(new Event('input', { bubbles: true }));
+                    setTimeout(function() {
+                        var submitBtn = window.parent.document.querySelector('button[data-testid="stChatInputSubmitButton"]');
+                        if (submitBtn) { submitBtn.click(); }
+                    }, 300);
                 }
-            ]
-            st.rerun()
+            } catch(err) {
+                navigator.clipboard.writeText(spoken);
+            }
+        };
+        recognition.onend = function() {
+            isRec = false;
+            setTimeout(function() {
+                document.getElementById('micBtn').style.background = '#2563EB';
+                document.getElementById('micIcon').innerText = '🎙️';
+                document.getElementById('micText').innerText = 'Tap to Speak (बोलकर पूछें)';
+            }, 2500);
+        };
+    }
+    function toggleSpeech() {
+        if (!recognition) {
+            alert('Browser speech recognition is supported on Google Chrome and Microsoft Edge.');
+            return;
+        }
+        if (isRec) { recognition.stop(); } else { recognition.start(); }
+    }
+    </script>
+    """, height=44)
 
-    for msg in st.session_state["chat_history"]:
-        if msg["role"] == "user":
-            with st.chat_message("user", avatar="👤"):
-                st.markdown(f"**{msg['content']}**")
-        else:
-            with st.chat_message("assistant", avatar="🏛️"):
-                st.markdown(msg["content"])
-                
-                # Audio Playback
-                if "audio_bytes" in msg and msg["audio_bytes"]:
-                    st.caption("🔊 Natural Voice Audio (बोलकर सुनाएं):")
-                    st.audio(msg["audio_bytes"], format="audio/mp3")
-                elif "speech" in msg and msg["speech"]:
-                    safe_sp = msg["speech"].replace('"', '&quot;').replace("'", "&#39;").replace("\n", " ")
-                    st.components.v1.html(f"""
-                    <div style="display: flex; align-items: center; gap: 8px;">
-                        <button onclick="speakText()" style="background: #EFF6FF; border: 1px solid #BFDBFE; color: #1D4ED8; padding: 4px 12px; border-radius: 6px; font-size: 11.5px; font-weight: 700; cursor: pointer; display: flex; align-items: center; gap: 5px;">
-                            🔊 Listen with Web Speech
-                        </button>
-                        <button onclick="window.speechSynthesis.cancel()" style="background: #F1F5F9; border: 1px solid #CBD5E1; color: #475569; padding: 4px 8px; border-radius: 6px; font-size: 11.5px; cursor: pointer;">
-                            ⏹️ Stop
-                        </button>
-                        <script>
-                        function speakText() {{
-                            window.speechSynthesis.cancel();
-                            var utter = new SpeechSynthesisUtterance("{safe_sp}");
-                            utter.rate = 0.92;
-                            window.speechSynthesis.speak(utter);
-                        }}
-                        </script>
-                    </div>
-                    """, height=38)
+    # 5. Clean Bottom Chat Input
+    user_query = st.chat_input(f"Message InfraBudget Copilot about {st.session_state['selected_district']} (Hindi / English)...")
 
-    # 4. CHAT INPUT
-    user_query = st.chat_input(f"Type or paste your doubt about {st.session_state['selected_district']} infrastructure here...")
-    
     prompt_to_process = st.session_state.pop("pending_prompt", None) or user_query
 
     if prompt_to_process:
         st.session_state["chat_history"].append({"role": "user", "content": prompt_to_process})
         
-        is_hindi = any(char in prompt_to_process for char in "अआइईउऊऋएऐओऔकखगघचछजझटठडढणतथदधनपफबभमयरलवशषसह") or any(k in prompt_to_process.lower() for k in ["samjhao", "kaise", "kya", "batao", "paani", "sadak", "gaddhe"])
+        is_hindi = any(char in prompt_to_process for char in "अआइईउऊऋएऐओऔकखगघचछजझटठडढणतथदधनपफबभमयरलवशषसह") or any(k in prompt_to_process.lower() for k in ["samjhao", "kaise", "kya", "batao", "paani", "sadak", "gaddhe", "kharab"])
         lang_detected = "Hindi" if is_hindi else "English"
         
         ai_resp = answer_municipal_query(prompt_to_process, df_wards, city_name=st.session_state['selected_district'], lang=lang_detected)
@@ -1182,18 +1139,3 @@ with tab5:
             "audio_bytes": audio_mp3
         })
         st.rerun()
-
-    st.markdown("---")
-    st.markdown("#### 📄 Executive Report Exporter")
-    rep_c1, rep_c2 = st.columns([7, 3])
-    with rep_c1:
-        st.markdown(f"Official municipal memorandum citing ML deficit diagnostics and PuLP allocations for **{st.session_state['selected_district']}**.")
-    with rep_c2:
-        report_text = generate_executive_report(df_wards, city_name=st.session_state['selected_district'])
-        st.download_button(
-            label="📥 Download Official Report (.md)",
-            data=report_text,
-            file_name=f"InfraBudget_{st.session_state['selected_district'].replace(' ', '_')}_{datetime.now().strftime('%Y%m%d')}.md",
-            mime="text/markdown",
-            use_container_width=True
-        )

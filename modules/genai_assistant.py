@@ -156,6 +156,85 @@ InfraBudget AI is an enterprise **B2G (Business-to-Government) Decision Command 
 
         return {"type": "answer", "content": content, "speech": speech}
 
+    # Check if user is asking about critical/worst wards
+    if any(k in p_lower for k in ["critical", "worst", "highest deficit", "kharab", "gambhir", "pareshan", "sabse"]) or any(k in prompt for k in ["गंभीर", "खराब", "सबसे"]):
+        crit_list = critical_wards.head(3)
+        if lang == "Hindi":
+            crit_bullets = "\n".join([f"- **{r['ward_name']}**: Deficit `{r['deficit_score']}/100` | सड़क आयु: `{r['avg_road_age_years']} वर्ष` | पानी कमी: `{r['water_deficit_pct']}%`" for _, r in crit_list.iterrows()])
+            content = f"""
+### 🚨 {city_name} के सर्वाधिक संकटग्रस्त वार्ड (Critical Deficit Wards)
+
+वर्तमान में कुल **{len(critical_wards)} वार्ड** गंभीर जोखिम श्रेणी में हैं। शीर्ष 3 सबसे प्रभावित वार्ड:
+
+{crit_bullets}
+
+**मुख्य कारण**:
+- सड़कों की अत्यधिक पुरानी आयु व अनसुलझे गड्ढे।
+- पेयजल पाइपलाइन में कम दबाव व जलभराव की समस्या।
+- उच्च नागरिक शिकायत दर (30 दिन)।
+"""
+            speech = f"Shahar ke sabse kharab sthiti wale wards hain: {', '.join(crit_list['ward_name'].tolist())}. Yahan sadak aur paani ki sthiti behad gambhir hai."
+        else:
+            crit_bullets = "\n".join([f"- **{r['ward_name']}**: Deficit `{r['deficit_score']}/100` | Road Age: `{r['avg_road_age_years']} yrs` | Water Shortage: `{r['water_deficit_pct']}%`" for _, r in crit_list.iterrows()])
+            content = f"""
+### 🚨 Most Critical Vulnerability Wards in {city_name}
+
+Currently, **{len(critical_wards)} wards** exceed the critical deficit threshold (Score > 62.0). Top 3 priority wards:
+
+{crit_bullets}
+
+**Core Drivers**:
+- Severely deteriorated asphalt with high unresolved pothole density.
+- Low IoT water pressure and high drainage choke vulnerability.
+- High citizen grievance ticket volume in the past 30 days.
+"""
+            speech = f"The most critical deficit wards requiring immediate capital intervention are {', '.join(crit_list['ward_name'].tolist())}."
+
+        return {"type": "answer", "content": content, "speech": speech}
+
+    # Check if budget / PuLP optimization query
+    if any(k in p_lower for k in ["pulp", "linear programming", "budget", "allocate", "allocation", "math", "algorithm"]) or any(k in prompt for k in ["बजट", "बंटवारा", "गणित", "ऑप्टिमाइज़ेशन"]):
+        if lang == "Hindi":
+            content = f"""
+### ⚖️ PuLP AI बजट का गणितीय व निष्पक्ष बंटवारा कैसे करता है?
+
+नगर निगमों में पारंपरिक रूप से बजट अफसरों या नेताओं के प्रभाव से बंटता था। **InfraBudget AI** इसे पूरी तरह वैज्ञानिक बनाता है:
+
+1. **घाटा स्कोर (Deficit Index 0-100)**:
+   - हर वार्ड की टूटी सड़कें, पानी की कमी, और 30 दिन की जन शिकायतों के आधार पर घाटे का सटीक स्कोर निकाला जाता है।
+
+2. **PuLP लीनियर प्रोग्रामिंग (Linear Programming LP Solver)**:
+   - यह एक शक्तिशाली गणितीय अल्गोरिदम है।
+   - आपके पास जितना कुल बजट उपलब्ध है (जैसे ₹{df['current_budget_lakhs'].sum():,.0f} लाख), यह उसे इस फॉर्मूले से बांटता है ताकि पूरे शहर का कुल बुनियादी घाटा सबसे कम हो सके।
+
+3. **समानता का नियम (Baseline Equity Floor)**:
+   - गणितीय मॉडल यह सुनिश्चित करता है कि किसी भी वार्ड को ₹0 न मिले; हर वार्ड को अनिवार्य न्यूनतम फंड मिलता है।
+
+4. **ब्लॉकचेन एस्क्रो (Leakage Prevention)**:
+   - फंड सीधे ठेकेदार को नहीं जाता; जब ड्रोन व नागरिक काम पूरा होने की पुष्टि करते हैं, तभी स्मार्ट कॉन्ट्रैक्ट फंड रिलीज करता है।
+"""
+            speech = f"PuLP Linear Programming ek mathematical model hai jo shahar ke kul budget ko is tarah baantata hai jisse sabhi wardon ka ausat ghata sabse jaldi kam ho sake aur sabhi ko nispaksh fund mile."
+        else:
+            content = f"""
+### ⚖️ How PuLP AI Mathematically & Fairly Allocates Municipal Capital
+
+Traditional municipal budget distribution often suffers from historical inertia and political lobbying. **InfraBudget AI** replaces this with mathematically proven **Constrained Linear Programming (PuLP)**:
+
+1. **Objective Function**:
+   - Minimize total city-wide infrastructure deficit weighted by population and ward vulnerability.
+2. **Equity Floor Constraint**:
+   - Guarantees every ward receives a baseline non-zero capital allocation regardless of size.
+3. **Budget Ceiling Constraint**:
+   - Total disbursed capital strictly equals the municipal sanctioned pool (`₹{df['current_budget_lakhs'].sum()/100:.2f} Crores`).
+4. **Diminishing Returns Curve**:
+   - Prioritizes capital where marginal benefit to deficit reduction is highest (severe drainage & pothole hazards).
+5. **Blockchain Smart Milestone Escrow**:
+   - Disburses funds in verifiable phases upon drone imagery and citizen quorum sign-off.
+"""
+            speech = f"PuLP uses constrained linear programming to mathematically minimize city-wide infrastructure deficit while guaranteeing fair baseline equity to every single ward."
+
+        return {"type": "answer", "content": content, "speech": speech}
+
     # Drainage / Water query
     if "drainage" in p_lower or "water" in p_lower or "drain" in p_lower or "जल" in prompt or "नाली" in prompt or "पानी" in prompt or "पाणी" in prompt or "ನೀರು" in prompt:
         if lang == "Hindi":
