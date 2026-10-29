@@ -1028,7 +1028,7 @@ with tab5:
     # 2. MICROPHONE VOICE INPUT COMPONENT (Web Speech Recognition)
     st.markdown("<div style='height: 8px;'></div>", unsafe_allow_html=True)
     with st.container(border=True):
-        st.markdown(f"""
+        st.components.v1.html(f"""
         <div style="font-family: 'Plus Jakarta Sans', sans-serif;">
             <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
                 <div style="display: flex; align-items: center; gap: 12px;">
